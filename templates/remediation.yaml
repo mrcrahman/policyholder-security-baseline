@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Event-driven S3 remediation and CloudTrail tamper alerting.
+Parameters:
+  ProtectedBucketName:
+    Type: String
+  AlertTopicArn:
+    Type: String
+Resources:
+  RemediationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: RestoreProtectedBucketBlockPublicAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:PutBucketPublicAccessBlock
+                Resource: !Sub arn:${AWS::Partition}:s3:::${ProtectedBucketName}
+  RemediationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../build/lambda
+      Handler: handler.lambda_handler
+      Runtime: python3.12
+      Role: !GetAtt RemediationRole.Arn
+  S3PublicAccessBlockDeletedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - s3.amazonaws.com
+          eventName:
+            - DeleteBucketPublicAccessBlock
+          requestParameters:
+            bucketName:
+              - !Ref ProtectedBucketName
+      Targets:
+        - Arn: !GetAtt RemediationFunction.Arn
+          Id: RestoreS3BlockPublicAccess
+  PermissionForS3RuleToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RemediationFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt S3PublicAccessBlockDeletedRule.Arn
+  CloudTrailTamperRule:
+    Type: AWS::Events::Rule
+    Properties:
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.cloudtrail
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - cloudtrail.amazonaws.com
+          eventName:
+            - StopLogging
+      Targets:
+        - Arn: !Ref AlertTopicArn
+          Id: NotifyCloudTrailStopLogging
+  EventBridgeTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AlertTopicArn
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEventBridgeToPublishTamperAlert
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref AlertTopicArn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt CloudTrailTamperRule.Arn
+Outputs:
+  RemediationFunctionName:
+    Value: !Ref RemediationFunction
+  S3RemediationRuleArn:
+    Value: !GetAtt S3PublicAccessBlockDeletedRule.Arn
+  CloudTrailTamperRuleArn:
+    Value: !GetAtt CloudTrailTamperRule.Arn
