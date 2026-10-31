@@ -159,12 +159,10 @@ Resources:
           - AWS::S3::Bucket
           - AWS::EC2::SecurityGroup
           - AWS::CloudTrail::Trail
-          - AWS::GuardDuty::Detector
           - AWS::SecurityHub::Standard
   ConfigDeliveryChannel:
     Type: AWS::Config::DeliveryChannel
     DependsOn:
-      - ConfigRecorder
       - AuditBucketPolicy
     Properties:
       Name: default
@@ -199,11 +197,6 @@ Resources:
     DependsOn: SecurityHub
     Properties:
       StandardsArn: !Sub arn:${AWS::Partition}:securityhub:${AWS::Region}::standards/cis-aws-foundations-benchmark/v/5.0.0
-  GuardDutyDetector:
-    Type: AWS::GuardDuty::Detector
-    Properties:
-      Enable: true
-      FindingPublishingFrequency: FIFTEEN_MINUTES
   LabVpc:
     Type: AWS::EC2::VPC
     Properties:
@@ -234,5 +227,3 @@ Outputs:
     Value: !GetAtt LabSecurityGroup.GroupId
   SecurityHubStandardSubscriptionArn:
     Value: !Ref CisStandard
-  GuardDutyDetectorId:
-    Value: !Ref GuardDutyDetector
