@@ -159,7 +159,6 @@ Resources:
           - AWS::S3::Bucket
           - AWS::EC2::SecurityGroup
           - AWS::CloudTrail::Trail
-          - AWS::SecurityHub::Standard
   ConfigDeliveryChannel:
     Type: AWS::Config::DeliveryChannel
     DependsOn:
@@ -185,11 +184,6 @@ Resources:
       Source:
         Owner: AWS
         SourceIdentifier: INCOMING_SSH_DISABLED
-  CisStandard:
-    Type: AWS::SecurityHub::Standard
-    DependsOn: SecurityHub
-    Properties:
-      StandardsArn: !Sub arn:${AWS::Partition}:securityhub:${AWS::Region}::standards/cis-aws-foundations-benchmark/v/5.0.0
   LabVpc:
     Type: AWS::EC2::VPC
     Properties:
@@ -218,5 +212,3 @@ Outputs:
     Value: !Ref AlertTopic
   LabSecurityGroupId:
     Value: !GetAtt LabSecurityGroup.GroupId
-  SecurityHubStandardSubscriptionArn:
-    Value: !Ref CisStandard
