@@ -1,3 +1,7 @@
-template-file-path: templates/baseline.yaml
-parameters: {}
-tags: {}
+{
+  "template-file-path": "templates/baseline.yaml",
+  "parameters": {
+    "AlertEmail": "crahman@student.cscc.edu"
+  },
+  "tags": {}
+}
