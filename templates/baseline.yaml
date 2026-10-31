@@ -185,13 +185,6 @@ Resources:
       Source:
         Owner: AWS
         SourceIdentifier: INCOMING_SSH_DISABLED
-  SecurityHub:
-    Type: AWS::SecurityHub::Hub
-    DependsOn: ConfigDeliveryChannel
-    Properties:
-      AutoEnableControls: true
-      ControlFindingGenerator: SECURITY_CONTROL
-      EnableDefaultStandards: false
   CisStandard:
     Type: AWS::SecurityHub::Standard
     DependsOn: SecurityHub
