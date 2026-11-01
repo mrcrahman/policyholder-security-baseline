@@ -81,11 +81,40 @@ I did this project to learn how to connect GitHub to CloudFormation, use AWS Lam
 
 ## Errors I Hit and How I Fixed Them
 
-| Error | What happened | Fix |
-|---|---|---|
-| Stack couldn't be created or updated | The region I started in had already been used, so CloudFormation kept failing to create or update the stack. | Moved the whole deployment to **us-east-2 (Ohio)** and redeployed there. |
-| GitHub wouldn't connect to CloudFormation | Setting up Git sync between my repo and CloudFormation failed on my original AWS account and took most of my time. | Used a fresh AWS account, reconnected GitHub, and Git sync deployed the stack. |
-| `SubscriptionRequiredException` on Security Hub | The AWS Free plan doesn't allow Security Hub, so the stack failed when it tried to enable it. | Removed Security Hub from the template and kept detection in AWS Config, CloudTrail, and EventBridge. |
+### 1. The stack wouldn't create or update
+
+> "I did indeed have some errors because the region I was using had already been used, so I had to use a different region, and it kept saying the stack couldn't be updated or created."
+
+**Fix:** I moved the deployment to a clean region, **us-east-2 (Ohio)**. After that the stack deployed and reached `UPDATE_COMPLETE`.
+
+![CloudFormation stack in us-east-2 showing UPDATE_COMPLETE](docs/images/error-region-stack-fixed.png)
+
+### 2. GitHub wouldn't connect to CloudFormation
+
+> "The most challenging part was connecting my GitHub to my CloudFormation; it generally took a significant amount of my time, but I'm glad I was able to try another way, since it was a new account because there was a problem with my current one for some reason."
+
+> "...figuring out why uploading a .yaml file was not connecting with the AWS config I used with Git, and having patience overall; it took me a while to know why the stack was not connecting and to understand how the configuration gap started, and what to do to prevent that."
+
+**Fix:** I switched to a new AWS account and set up Git sync again, and the stack connected.
+
+### 3. `NoSuchPublicAccessBlockConfiguration` (on purpose)
+
+This error was part of the test. I deleted the bucket's Block Public Access settings outside of CloudFormation to see what would happen:
+
+```
+aws: [ERROR]: An error occurred (NoSuchPublicAccessBlockConfiguration) when calling the GetPublicAccessBlock operation: The public access block configuration was not found
+```
+
+> "I observed when I removed the protected bucket and tried to see if it had worked, and how this is scary, as it creates a gap so if someone is not careful, this can be a highly crucial security risk"
+
+**Fix:** I turned all four settings back on, and `get-public-access-block` showed every one as `true`:
+
+```
+aws s3api put-public-access-block --bucket "$PROTECTED_BUCKET" \
+  --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+```
+
+![CloudShell showing the NoSuchPublicAccessBlockConfiguration error and the fix](docs/images/error-s3-public-access-block.png)
 
 ## Deploy (us-east-2)
 
