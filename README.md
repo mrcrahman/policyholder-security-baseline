@@ -79,6 +79,14 @@ This project took me about 2 days. The most challenging part was connecting GitH
 
 I did this project to learn how to connect GitHub to CloudFormation, use AWS Lambda to repair the gap, and use EventBridge to notify me when something happens in my account. Next, I want to go deeper into Infrastructure as Code.
 
+## Errors I Hit and How I Fixed Them
+
+| Error | What happened | Fix |
+|---|---|---|
+| Stack couldn't be created or updated | The region I started in had already been used, so CloudFormation kept failing to create or update the stack. | Moved the whole deployment to **us-east-2 (Ohio)** and redeployed there. |
+| GitHub wouldn't connect to CloudFormation | Setting up Git sync between my repo and CloudFormation failed on my original AWS account and took most of my time. | Used a fresh AWS account, reconnected GitHub, and Git sync deployed the stack. |
+| `SubscriptionRequiredException` on Security Hub | The AWS Free plan doesn't allow Security Hub, so the stack failed when it tried to enable it. | Removed Security Hub from the template and kept detection in AWS Config, CloudTrail, and EventBridge. |
+
 ## Deploy (us-east-2)
 
 1. **Baseline stack:** create the stack `policyholder-security-baseline` in `us-east-2` with CloudFormation **Sync from Git**, pointing at this repo, branch `main`, and the deployment file `cfn-publish.json` (set `AlertEmail` to your address first). Or deploy it from the CLI:
