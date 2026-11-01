@@ -8,13 +8,13 @@
 
 ### Baseline detection, remediation, and SCP safety
 
-In this project, I am building an AWS Security Baseline, so basically it is a scenario that some companies have experienced, so all it is about when an employee accidentally removes a part of the organization that keeps it safe. An intruder gets in and does everything they can to cause damage, and I'll focus on what they did.
+In this project, I'm building an AWS security baseline. It's based on a scenario some companies have actually experienced: an employee accidentally removes part of the setup that keeps the organization safe, and an intruder gets in and does everything they can to cause damage. I'll focus on what they did.
 
 ## Building a CI-Gated Infrastructure Repository
 
 ### Establishing repeatable infrastructure security checks
 
-I'm creating a Git repository, so if the security has a malfunction or loses trust, this will reject the problems before it gets ready to deploy. I will create the supplied infrastructure files that would pass a local security check and confirm that GitHub Actions works as it should.
+First, I'm creating a Git repository that acts as a gate: if something in the security setup breaks or can't be trusted, the problem gets rejected before it's ever deployed. I'm adding the supplied infrastructure files, making sure they pass a local security check, and confirming that GitHub Actions works the way it should.
 
 ![Building a CI-Gated Infrastructure Repository](docs/images/01-ci-gated-repository.png)
 
@@ -22,7 +22,7 @@ I'm creating a Git repository, so if the security has a malfunction or loses tru
 
 ### Provisioning audit, compliance, and alerting services
 
-What I'm creating is a security baseline, basically a set of guardrails I customized to watch what happens in the account, and it alerts me if it shows malicious activity in the account so for right now I'm trying to deploy it. I did indeed have some errors because the region I was using had already been used, so I had to use a different region, and it kept saying the stack couldn't be updated or created.
+With the repo in place, I'm deploying the security baseline itself. It's basically a set of guardrails I customized to watch what happens in the account and alert me if there's malicious activity. I did run into errors here: the region I was using had already been used, so the stack kept saying it couldn't be created or updated, and I had to switch to a different region.
 
 ![Deploying Detective Security Controls](docs/images/02-detective-controls-stack.png)
 
@@ -30,11 +30,11 @@ What I'm creating is a security baseline, basically a set of guardrails I custom
 
 ### Testing an out-of-band S3 security change
 
-For this step, I'm using AWS CloudTrail and AWS Config to monitor my AWS account for suspicious changes, and I'm using EventBridge and Lambda to detect them and enable the necessary settings, like enabling block public access. Currently, I'm trying to capture a protected bucket from the stack output and demonstrate the configuration gap without adding data or a public bucket policy.
+Next, I'm using AWS CloudTrail and AWS Config to monitor my account for suspicious changes, with EventBridge and Lambda set up to catch them and turn the right settings back on, like Block Public Access. For this step, I'm grabbing the protected bucket from the stack output and showing the configuration gap without adding any data or a public bucket policy.
 
 ### What infrastructure drift revealed
 
-I observed when I removed the protected bucket's Block Public Access setting and tried to see if it had worked, and how this is scary, as it creates a gap so if someone is not careful, this can be a highly crucial security risk
+When I removed the protected bucket's Block Public Access setting and checked whether it had worked, I saw how scary this is. It creates a gap, and if someone isn't careful, that gap can become a serious security risk.
 
 ![Demonstrating the S3 Guardrail Gap](docs/images/03-s3-guardrail-gap.png)
 
@@ -42,19 +42,19 @@ I observed when I removed the protected bucket's Block Public Access setting and
 
 ### EventBridge-triggered Lambda remediation
 
-What I'm going to do is build a lambda deployment package with the supplied handler, then package the remediation template and deploy the CloudFormation stack, and going to test to see if the responder restores it automatically by deleting the bucket-level setting.
+To close that gap, I'm building a Lambda deployment package with the supplied handler, packaging the remediation template, and deploying it as a CloudFormation stack. Then I'm testing it by deleting the bucket-level setting to see whether the responder restores it automatically.
 
 ## Validating CloudTrail Protection and Tamper Detection
 
 ### Validating policy as code and alerting
 
-I'm validating the unattached CloudTrail protection SCP against its required actions, then triggering a brief CloudTrail stop-start event. Once that's done, I'll check to see if I receive the tamper-alert email after confirming the trail status.
+Next, I'm validating the unattached CloudTrail protection SCP against its required actions, then triggering a brief CloudTrail stop-start event. After confirming the trail status, I'll check whether the tamper-alert email arrives.
 
 ![Validating CloudTrail Protection and Tamper Detection](docs/images/04-cloudtrail-tamper-check.png)
 
 ### Safely keeping the SCP unattached
 
-I kept it unattached because it avoids accidental lockouts, and standalone accounts don't support it, and I verified safety by running our script to check the rules automatically.
+I kept the SCP unattached for two reasons: it avoids accidental lockouts, and standalone accounts don't support SCPs anyway. To make sure it's still safe, I ran our script to check its rules automatically.
 
 ## Extending Automated Remediation to World-Open SSH
 
@@ -62,7 +62,7 @@ I kept it unattached because it avoids accidental lockouts, and standalone accou
 
 ### Precisely revoking only unsafe SSH access
 
-In this project extension, the responder checks. If the security group has the specified tag, it makes sure it connects to the lab, and it checks whether the port is 22 and whether IP ranges are allowed; if they are not configured, it will blindly delete the important stuff, which will cause errors and give headaches to the people who configured it in the first place.
+In this extension, the responder runs a few checks before it changes anything. It makes sure the security group has the specified tag, so it knows the group belongs to the lab, and it checks whether the port is 22 and which IP ranges are allowed. Without those checks, it would blindly delete important rules, which would cause errors and give headaches to the people who set them up in the first place.
 
 > **Note:** this repository doesn't include the SSH responder code. The deployed baseline detects world-open SSH with the AWS Config rule `policyholder-restricted-ssh` (`INCOMING_SSH_DISABLED`) on the lab security group.
 
@@ -70,15 +70,15 @@ In this project extension, the responder checks. If the security group has the s
 
 ### Tools and security concepts applied
 
-The key tools I used include Lambda, CloudFormation, CloudTrail, CloudShell, Amazon EventBridge, Amazon SNS, and GitHub with Git. The concepts I learnt include figuring out why uploading a .yaml file was not connecting with the AWS config I used with Git, and having patience overall; it took me a while to know why the stack was not connecting and to understand how the configuration gap started, and what to do to prevent that.
+The key tools I used were Lambda, CloudFormation, CloudTrail, CloudShell, Amazon EventBridge, Amazon SNS, and GitHub with Git. One thing I learned was how to figure out why the .yaml file I uploaded wasn't connecting with the AWS configuration I set up through Git. I also learned patience: it took me a while to understand why the stack wasn't connecting, how the configuration gap started, and what to do to prevent it.
 
 ### Project timeline and challenges
 
-This project took me approximately 2 days. The most challenging part was connecting my GitHub to my CloudFormation; it generally took a significant amount of my time, but I'm glad I was able to try another way, since it was a new account because there was a problem with my current one for some reason.
+This project took me about 2 days. The most challenging part was connecting GitHub to CloudFormation, which took up a lot of my time. My current account had a problem for some reason, so I tried another way with a new account, and I'm glad I did.
 
 ### Next steps in cloud security
 
-I did this project today to learn how to connect my GitHub to CloudFormation and use AWS Lambda to repair the gap, and with EventBridge, I get a notification if something happens in my account. Next, I want to go deeper into Infrastructure as Code.
+I did this project to learn how to connect GitHub to CloudFormation, use AWS Lambda to repair the gap, and use EventBridge to notify me when something happens in my account. Next, I want to go deeper into Infrastructure as Code.
 
 ## Deploy (us-east-2)
 
