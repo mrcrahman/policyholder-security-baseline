@@ -2,7 +2,6 @@
 
 **Author:** Cherif Rahman
 
-> **Practice scenario modeled on Nationwide, not affiliated with or performed for Nationwide.** This is a personal portfolio lab. All accounts, buckets, and data are synthetic.
 
 ## Defining a Safe, Automated Security Baseline
 
