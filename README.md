@@ -79,6 +79,26 @@ This project took me about 2 days. The most challenging part was connecting GitH
 
 I did this project to learn how to connect GitHub to CloudFormation, use AWS Lambda to repair the gap, and use EventBridge to notify me when something happens in my account. Next, I want to go deeper into Infrastructure as Code.
 
+## AWS Services Used and Why
+
+What each service does, why it was the right pick for this baseline, and what I want to learn next so I can build it on my own next time.
+
+| Service | What it does | Why I used it here | Learn next |
+|---|---|---|---|
+| **AWS CloudFormation** (with Git sync) | Builds AWS resources from YAML templates (Infrastructure as Code). Git sync redeploys the stack whenever the repo changes. | Every control is written down, reviewed, and redeployable. Nothing is clicked by hand, so it's repeatable and easy to audit. | Change sets, drift detection, StackSets for many accounts. [CloudFormation docs](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html) |
+| **GitHub Actions + cfn-lint** | Runs checks on every push. cfn-lint catches template mistakes before deploy. | Acts as a security gate: a broken or unsafe template fails in CI instead of in the account. | Add Checkov or cfn-guard for security-policy checks. [cfn-lint](https://github.com/aws-cloudformation/cfn-lint) |
+| **AWS CloudTrail** | Records API calls (who did what, when, from where) across regions. | Audit evidence for every change. Log file validation proves logs weren't edited. | Send trails to CloudWatch Logs and alarm on risky events (root login). [CloudTrail docs](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html) |
+| **Amazon S3** (+ Block Public Access, bucket policy) | Stores the CloudTrail logs and the "protected" test bucket. Block Public Access stops public exposure. | Public buckets are one of the most common cloud leaks; this is the main guardrail. | SSE-KMS encryption, Object Lock, S3 access logs. [S3 Block Public Access](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html) |
+| **AWS Config** (recorder + managed rules) | Tracks resource settings over time and flags anything that breaks a rule. | Detects drift, like the world-open SSH rule, without me checking by hand. Managed rules are free to start and need no code. | Conformance packs, custom rules, auto-remediation with SSM. [AWS Config docs](https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html) |
+| **Amazon EventBridge** | Watches for specific events (like a Block Public Access change) and triggers a target. | Reacts in seconds to a risky change instead of waiting for a scan. | Event patterns, cross-account event buses. [EventBridge docs](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) |
+| **AWS Lambda** (via AWS SAM) | Runs small code without a server. My function turns S3 Block Public Access back on. | Cheap, fast auto-remediation that only runs when triggered. | Least-privilege execution roles, error handling, dead-letter queues. [Lambda docs](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html) |
+| **Amazon SNS** | Sends notifications (email here). | Alerts me when CloudTrail is tampered with or something is fixed, so a person always knows. | Topic encryption, sending alerts to Slack or ticketing. [SNS docs](https://docs.aws.amazon.com/sns/latest/dg/welcome.html) |
+| **AWS IAM** (roles) | Controls who and what can do actions in AWS. | Each service (Config, Lambda) gets its own role with only the permissions it needs (least privilege). | IAM Access Analyzer, permission boundaries. [IAM docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html) |
+| **Service Control Policy (AWS Organizations)** | An organization-level "deny" that even admins can't override. | Preventive control: blocks turning off CloudTrail. Kept unattached in the lab so I couldn't lock myself out. | Testing SCPs in a sandbox OU before attaching. [SCP docs](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html) |
+| **Amazon VPC + Security Group** | A private network and a firewall for it. | A test target to prove Config catches a world-open SSH (port 22 from 0.0.0.0/0) rule. | Network ACLs, VPC Flow Logs, Session Manager instead of SSH. [Security groups](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html) |
+
+**How it fits together:** *Prevent* (SCP, Block Public Access), *Detect* (CloudTrail, Config, EventBridge), *Respond* (Lambda auto-fix, SNS alert), all deployed as code and checked in CI.
+
 ## Errors I Hit and How I Fixed Them
 
 ### 1. The stack wouldn't create or update
